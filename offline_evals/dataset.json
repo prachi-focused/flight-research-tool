@@ -1,0 +1,102 @@
+[
+  {
+    "inputs": {
+      "query": "Suggest a flight from san francisco to tokyo for January 30th, 2027?"
+    },
+    "outputs": {
+      "expected_trajectory": ["get_flights_info"],
+      "expected_tool_args": {
+        "origin": "SFO",
+        "destination": "NRT",
+        "date": "2027-01-30"
+      },
+      "reference_response": "Listed are flights from San Francisco to Tokyo on January 30th, 2027."
+    }
+  },
+  {
+    "inputs": {
+      "query": "Suggest a flight from san francisco to tokyo for November 30th, 2026?"
+    },
+    "outputs": {
+      "expected_trajectory": ["get_flights_info"],
+      "expected_tool_args": {
+        "origin": "SFO",
+        "destination": "NRT",
+        "date": "2026-11-30"
+      },
+      "reference_response": "I found a flight from San Francisco to Tokyo for November 30th, 2026."
+    }
+  },
+  {
+    "inputs": {
+      "query": "Find the best flights from New York to London on November 1st, 2026. Provide the link to book the flight and the price."
+    },
+    "outputs": {
+      "expected_trajectory": ["get_flights_info"],
+      "expected_tool_args": {
+        "origin": "JFK",
+        "destination": "LHR",
+        "date": "2026-11-01"
+      },
+      "reference_response": "Here are flights from New York to London on November 1st, 2026, including prices and booking links."
+    }
+  },
+  {
+    "inputs": {
+      "query": "Get flights from LAX to CDG on 2026-12-15."
+    },
+    "outputs": {
+      "expected_trajectory": ["get_flights_info"],
+      "expected_tool_args": {
+        "origin": "LAX",
+        "destination": "CDG",
+        "date": "2026-12-15"
+      },
+      "reference_response": "Here are flights from Los Angeles (LAX) to Paris (CDG) on December 15th, 2026."
+    }
+  },
+  {
+    "inputs": {
+      "query": "I need a one-way flight from Boston to Miami on March 10, 2027."
+    },
+    "outputs": {
+      "expected_trajectory": ["get_flights_info"],
+      "expected_tool_args": {
+        "origin": "BOS",
+        "destination": "MIA",
+        "date": "2027-03-10"
+      },
+      "reference_response": "Here are one-way flights from Boston to Miami on March 10th, 2027."
+    }
+  },
+  {
+    "inputs": {
+      "query": "Find me flights from Chicago to Seattle."
+    },
+    "outputs": {
+      "expected_trajectory": [],
+      "expected_tool_args": null,
+      "reference_response": "I need a departure date to search flights from Chicago to Seattle. What date would you like to fly?"
+    }
+  },
+  {
+    "inputs": {
+      "query": "What's the weather like in Paris tomorrow?"
+    },
+    "outputs": {
+      "expected_trajectory": [],
+      "expected_tool_args": null,
+      "reference_response": "I can only help with flight information. I don't have a weather tool."
+    }
+  },
+  {
+    "inputs": {
+      "query": "What's the flight that can take me from vietnam to hawaii on Oct 10th, 2025?"
+    },
+    "outputs": {
+      "expected_trajectory": [],
+      "expected_tool_args": null,
+      "reference_response": "I need a further departure date to search for flights. The search will be easy if you provide specific cities for departure and arrival."
+    }
+  }
+]
