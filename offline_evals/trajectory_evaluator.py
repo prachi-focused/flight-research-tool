@@ -62,6 +62,12 @@ if __name__ == "__main__":
         evaluators=[trajectory_accuracy],
         experiment_prefix="flight-trajectory-eval-v1",
         max_concurrency=2,
-        metadata={"model": "openai/gpt-oss-20b", "change": "with agent's tool call bug"},
+        metadata={
+            "models": [
+                "openai:gpt-4o", # judge
+                "openai:gpt-oss-20b", # agent
+            ],
+            "change": "fixed agent's tool call bug",
+        },
     )
     print(results.url)
