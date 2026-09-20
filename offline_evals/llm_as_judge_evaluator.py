@@ -8,7 +8,6 @@ from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 from langsmith import Client
 from openevals.llm import create_llm_as_judge
-from openevals.prompts import CORRECTNESS_PROMPT
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -25,8 +24,43 @@ model = ChatOpenAI(
 )
 
 
+FLIGHT_CORRECTNESS_PROMPT = """You are evaluating a flight-search agent.
+
+The agent can only look up one-way flights. It needs a departure city/airport, an arrival city/airport, and a future departure date. It searches with get_flights_info using IATA codes (or Google kgmids) and YYYY-MM-DD dates. It cannot do weather, hotels, or other non-flight tasks.
+
+<Rubric>
+  A correct response:
+  - Stays in the flight-search domain
+  - When origin, destination, and a future date are all present: presents flight options for that route and date (prices and booking links if the user asked for them). Wording may differ from the reference.
+  - When origin, destination, or a future date is missing, empty, in the past, or too vague to search: does not invent flights. Explains what is wrong with the request and asks for the missing or invalid pieces.
+  - When the user asks for something other than flights: refuses and says it only helps with flight information.
+  - Does not claim tools or capabilities it does not have.
+
+  Penalize:
+  - Searching or listing flights when required fields are missing or invalid
+  - Refusing or only asking follow-up questions when the request was already complete enough to search
+  - Answering non-flight questions as if the agent had that capability
+  - Wrong route or date relative to the user request and the reference
+  - Fabricated flights, prices, or booking links that contradict a real search
+</Rubric>
+
+<input>
+{inputs}
+</input>
+
+<output>
+{outputs}
+</output>
+
+Use the reference as the expected behavior for this request, not as required wording:
+
+<reference_outputs>
+{reference_outputs}
+</reference_outputs>
+"""
+
 response_judge = create_llm_as_judge(
-    prompt=CORRECTNESS_PROMPT,
+    prompt=FLIGHT_CORRECTNESS_PROMPT,
     judge=model,
 )
 
@@ -62,5 +96,6 @@ if __name__ == "__main__":
         evaluators=[response_accuracy],
         experiment_prefix="flight-llm-judge-v2",
         max_concurrency=2,
+        metadata={"model": "openai/gpt-oss-20b", "change": "with tool call bug. Prompt changed"},
     )
     print(results.url)
