@@ -3,16 +3,15 @@ import os
 import sys
 from pathlib import Path
 
-from agentevals.trajectory.llm import (
-    TRAJECTORY_ACCURACY_PROMPT_WITH_REFERENCE,
-    create_trajectory_llm_as_judge,
-)
 from dotenv import load_dotenv
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 from langsmith import Client
+from openevals.llm import create_llm_as_judge
+from openevals.prompts import CORRECTNESS_PROMPT
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from agent import agent
 
 load_dotenv()
@@ -25,26 +24,23 @@ model = ChatOpenAI(
     api_key=os.environ["GROQ_API_KEY"],
 )
 
-judge = create_trajectory_llm_as_judge(
-    prompt=TRAJECTORY_ACCURACY_PROMPT_WITH_REFERENCE,
+
+response_judge = create_llm_as_judge(
+    prompt=CORRECTNESS_PROMPT,
     judge=model,
 )
-
 
 def invoke_agent(inputs: dict) -> dict:
     result = agent.invoke({"messages": [HumanMessage(content=inputs["query"])]})
     return {"messages": result["messages"]}
 
-
-def trajectory_accuracy(outputs: dict, inputs: dict, reference_outputs: dict) -> dict:
-    return judge(
-        outputs=outputs["messages"],
-        reference_outputs=[
-            HumanMessage(content=inputs["query"]),
-            AIMessage(content=reference_outputs["reference_response"]),
-        ],
+#  Judges if the AI response is correct based on the reference response
+def response_accuracy(outputs: dict, inputs: dict, reference_outputs: dict) -> dict:
+    return response_judge(
+        inputs=inputs["query"],
+        outputs=outputs["messages"][-1].content,
+        reference_outputs=reference_outputs["reference_response"],
     )
-
 
 def ensure_dataset(client: Client) -> None:
     examples = json.loads(Path(__file__).with_name("dataset.json").read_text())
@@ -63,8 +59,8 @@ if __name__ == "__main__":
     results = client.evaluate(
         invoke_agent,
         data=DATASET_NAME,
-        evaluators=[trajectory_accuracy],
-        experiment_prefix="flight-llm-judge-v1",
+        evaluators=[response_accuracy],
+        experiment_prefix="flight-llm-judge-v2",
         max_concurrency=2,
     )
     print(results.url)

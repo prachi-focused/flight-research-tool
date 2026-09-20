@@ -1,50 +1,66 @@
+import json
+import os
 import sys
 from pathlib import Path
 
-from agentevals.trajectory.match import create_trajectory_match_evaluator
+from agentevals.trajectory import create_trajectory_match_evaluator
 from dotenv import load_dotenv
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import HumanMessage
+from langchain_openai import ChatOpenAI
+from langsmith import Client
+from openevals.llm import create_llm_as_judge
+from openevals.prompts import CORRECTNESS_PROMPT
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from agent import agent
 
 load_dotenv()
 
-evaluator = create_trajectory_match_evaluator(
-    trajectory_match_mode="strict",
+DATASET_NAME = "flight-evals"
+
+model = ChatOpenAI(
+    model="openai/gpt-oss-20b",
+    base_url="https://api.groq.com/openai/v1",
+    api_key=os.environ["GROQ_API_KEY"],
 )
-# strict = Exact match of message structure and tool calls in the same order (message content can differ)
-# unordered = Same message structure and tool calls as reference, but tool calls can happen in any order,
-# subset = Agent calls only tools from reference (no extras),
-# superset = Agent calls at least the reference tools (extras allowed),
 
-def test_weather_tool_called_strict():
-    result = agent.invoke({
-        "messages": [HumanMessage(content="Suggest a flight from san francisco to tokyo for November 30th, 2026?")]
-    })
+trajectory_evaluator = create_trajectory_match_evaluator(
+    trajectory_match_mode="unordered",
+    tool_args_match_mode="exact",
+)
 
-    reference_trajectory = [
-        HumanMessage(content="Suggest a flight from san francisco to tokyo for November 30th, 2026?"),
-        # AIMessage(content="", tool_calls=[
-        #     {"id": "call_1", "name": "get_weather", "args": {"city": "San Francisco"}}
-        # ]),
-        # ToolMessage(content="It's 75 degrees and sunny in San Francisco.", tool_call_id="call_1"),
-        AIMessage(content="I found a flight from san francisco to tokyo for November 30th, 2026 for $1000."),
-    ]
 
-    evaluation = evaluator(
-        outputs=result["messages"],
-        reference_outputs=reference_trajectory
+def invoke_agent(inputs: dict) -> dict:
+    result = agent.invoke({"messages": [HumanMessage(content=inputs["query"])]})
+    return {"messages": result["messages"]}
+
+
+def trajectory_accuracy(outputs: dict, reference_outputs: dict) -> dict:
+    return trajectory_evaluator(
+        outputs=outputs["messages"],
+        reference_outputs=reference_outputs["expected_trajectory"],
     )
-    print(result["messages"])
-    print("--------------------------------")
-    print(reference_trajectory)
-    print("--------------------------------")
-    print(evaluation)
-    assert evaluation["score"] is True
 
-    print("Test passed")
+def ensure_dataset(client: Client) -> None:
+    examples = json.loads(Path(__file__).with_name("dataset.json").read_text())
+    if not client.has_dataset(dataset_name=DATASET_NAME):
+        client.create_dataset(DATASET_NAME, description="Flight agent evals")
+    else:
+        existing_ids = [e.id for e in client.list_examples(dataset_name=DATASET_NAME)]
+        if existing_ids:
+            client.delete_examples(existing_ids)
+    client.create_examples(dataset_name=DATASET_NAME, examples=examples)
 
 
 if __name__ == "__main__":
-    test_weather_tool_called_strict()
+    client = Client()
+    ensure_dataset(client)
+    results = client.evaluate(
+        invoke_agent,
+        data=DATASET_NAME,
+        evaluators=[trajectory_accuracy],
+        experiment_prefix="flight-trajectory-eval-v1",
+        max_concurrency=2,
+    )
+    print(results.url)
