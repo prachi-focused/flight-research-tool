@@ -3,6 +3,11 @@ import os
 import sys
 from pathlib import Path
 
+# Before the earliest future date in dataset.json (2026-11-01)
+# and after the past-date example (2025-10-10).
+os.environ["EVAL_TODAY"] = "2026-09-25"
+os.environ.pop("STUB_FLIGHTS", None)
+
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
@@ -17,8 +22,8 @@ load_dotenv()
 
 DATASET_NAME = "flight-evals"
 
-model = ChatOpenAI(
-    model="openai/gpt-oss-20b",
+judge_model = ChatOpenAI(
+    model="openai/gpt-oss-120b",
     base_url="https://api.groq.com/openai/v1",
     api_key=os.environ["GROQ_API_KEY"],
 )
@@ -61,7 +66,7 @@ Use the reference as the expected behavior for this request, not as required wor
 
 response_judge = create_llm_as_judge(
     prompt=FLIGHT_CORRECTNESS_PROMPT,
-    judge=model,
+    judge=judge_model,
 )
 
 def invoke_agent(inputs: dict) -> dict:
@@ -96,6 +101,6 @@ if __name__ == "__main__":
         evaluators=[response_accuracy],
         experiment_prefix="flight-llm-judge-v2",
         max_concurrency=2,
-        metadata={"model": "openai/gpt-oss-20b", "change": "with tool call bug. Prompt changed"},
+        metadata={"judge": "openai/gpt-oss-120b", "agent": "openai/gpt-oss-20b"},
     )
     print(results.url)

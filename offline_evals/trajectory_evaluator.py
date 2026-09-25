@@ -3,13 +3,16 @@ import os
 import sys
 from pathlib import Path
 
+# Before the earliest future date in dataset.json (2026-11-01)
+# and after the past-date example (2025-10-10).
+os.environ["EVAL_TODAY"] = "2026-09-25"
+# This eval scores tool calls only, so skip the live flight API.
+os.environ["STUB_FLIGHTS"] = "1"
+
 from agentevals.trajectory import create_trajectory_match_evaluator
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
-from langchain_openai import ChatOpenAI
 from langsmith import Client
-from openevals.llm import create_llm_as_judge
-from openevals.prompts import CORRECTNESS_PROMPT
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -18,12 +21,6 @@ from agent import agent
 load_dotenv()
 
 DATASET_NAME = "flight-evals"
-
-model = ChatOpenAI(
-    model="openai/gpt-oss-20b",
-    base_url="https://api.groq.com/openai/v1",
-    api_key=os.environ["GROQ_API_KEY"],
-)
 
 trajectory_evaluator = create_trajectory_match_evaluator(
     trajectory_match_mode="unordered",
@@ -63,11 +60,8 @@ if __name__ == "__main__":
         experiment_prefix="flight-trajectory-eval-v1",
         max_concurrency=2,
         metadata={
-            "models": [
-                "openai:gpt-4o", # judge
-                "openai:gpt-oss-20b", # agent
-            ],
-            "change": "fixed agent's tool call bug",
+            "agent": "openai/gpt-oss-20b",
+            "change": "stubbed flight tool; pinned eval date",
         },
     )
     print(results.url)

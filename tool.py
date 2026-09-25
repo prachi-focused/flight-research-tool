@@ -17,6 +17,13 @@ def get_flights_info(origin: str, destination: str, date: str) -> str:
         destination: Uppercase 3-letter IATA code (e.g. LHR) or a Google kgmid starting with /m or /g.
         date: Departure date in YYYY-MM-DD format.
     """
+    if os.environ.get("STUB_FLIGHTS") == "1":
+        return json.dumps({
+            "origin": origin,
+            "destination": destination,
+            "date": date,
+            "flights": [],
+        })
     try:
         results = client.search({
             "engine": "google_flights",

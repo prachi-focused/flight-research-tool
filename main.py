@@ -2,7 +2,7 @@ from agent import agent
 
 if __name__ == "__main__":
     context = """
-    You are a helpful assistant that can help me find the best flights from New York to London on November 3st, 2026.
+    You are a helpful assistant that can help me find the best flights from New York to London on November 3rd, 2026.
     Provide the link to book the flight and the price of the flight.
     """
     result = agent.invoke(
@@ -13,7 +13,6 @@ if __name__ == "__main__":
                     "content": context
                 }
             ],
-        "temperature": 0.2,
         },
         config={
             "tags": ["flight_search"],
@@ -21,7 +20,7 @@ if __name__ == "__main__":
                 "user_id": "111",
                 "origin": "New York",
                 "destination": "London",
-                "date": "2026-11-01",
+                "date": "2026-11-03",
             },
         },
     )
